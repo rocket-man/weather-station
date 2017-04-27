@@ -19,7 +19,7 @@ USERNAME = "EMAIL_USERNAME"
 PASSWORD = "EMAIL_PASSWORD"
 TO_ADD = "RECIPIENT_EMAIL" # Use an SMS gateway to send texts
 FROM_ADD = "SENDER_EMAIL"
-DEBUG = False
+DEBUG = False # Send message immediately
 
 # Sends report at specified time and launch alerts five minutes before window opening
 def main():
