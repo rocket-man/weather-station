@@ -19,6 +19,7 @@ USERNAME = "EMAIL_USERNAME"
 PASSWORD = "EMAIL_PASSWORD"
 TO_ADD = "RECIPIENT_EMAIL" # Use an SMS gateway to send texts
 FROM_ADD = "SENDER_EMAIL"
+DEBUG = False
 
 # Sends report at specified time and launch alerts five minutes before window opening
 def main():
@@ -30,7 +31,7 @@ def main():
 		os.system('clear')
 		print(hour, ":", minute)
 		
-		launchName, windOpens, temp, summary, vid = getInfo()
+		temp, hum, rain, launchName, windOpens, summary, vid = getInfo()
 		if vid == "":
 			vid = "No stream found"
 			
@@ -46,8 +47,8 @@ def main():
 			send(message, "")
 			print("Launch alert sent.")
 		# Timed message
-		if hour == 5 and minute == 0:			
-			message = makeMessage(launchName, windOpens, temp, summary, windowHour, windowMinute)
+		if hour == 22 and minute ==58 or DEBUG == 1:			
+			message = makeMessage(temp, hum, rain, launchName, windOpens, summary, windowHour, windowMinute)
 			messageOne, messageTwo = splitMessage(message)			
 			send(messageOne, messageTwo)
 			print("Message sent.")
@@ -61,7 +62,7 @@ def main():
 def getInfo():
 	apikey = 'API_KEY'
 	home = [YOUR_LAT, YOUR_LONG] # lat long
-	# Instantiates ForecastIO class that will be passed to currently and daily
+	# Instantiates ForecastIO class to be used for forecast
 	if SI_UNITS:
 		fio = ForecastIO.ForecastIO(apikey, units = ForecastIO.ForecastIO.UNITS_SI,
 									lang = ForecastIO.ForecastIO.LANG_ENGLISH,
@@ -72,13 +73,18 @@ def getInfo():
 									lang = ForecastIO.ForecastIO.LANG_ENGLISH,
 									latitude = home[0], longitude = home[1]
 									)	
-	current = FIOCurrently.FIOCurrently(fio)
-	currentTemp = current.temperature # Will be replaced w/ station data
+	weatherData = json.loads(request.urlopen("http://192.168.1.167").read().decode('utf8'))
 	
-	daily = FIODaily.FIODaily(fio)
+	temp = weatherData['temperature']
+	if SI_UNITS == False: # Convert C to F
+		temp = temp * 1.8 + 32
+	hum = weatherData['humidity']
+	rain = weatherData['rain']
+	# Get forecast for the day
+	daily = FIOHourly.FIOHourly(fio)
 	summ = daily.summary
 	weeklySum = summ.translate(str.maketrans('','', '\xb0')) # Remove degree symbol
-																
+	# Get next launch time									
 	launchResponse = request.urlopen("https://launchlibrary.net/1.2/launch/next/1").read().decode('utf8')
 	launchInfo = json.loads(launchResponse)
 	
@@ -86,7 +92,7 @@ def getInfo():
 	windowOpen = launchInfo['launches'][0]['windowstart']
 	link = str(launchInfo['launches'][0]['vidURLs']).strip("[']") # Get link and remove quotes
 	
-	return name, windowOpen, currentTemp, weeklySum, link
+	return temp, hum, rain, name, windowOpen, weeklySum, link
 
 # Retrieves and returns current hour and minute
 def getTime():
@@ -98,7 +104,7 @@ def getTime():
 	return hr, min
 
 # This assembles all the information into the final form to be sent in the text(s)
-def makeMessage(LName, LWind, WCurrent, WSummary, windowHr, windowMin):
+def makeMessage(temp, hum, rain, LName, LWind, WSummary, windowHr, windowMin):
 	if SI_UNITS:
 		units = "C"
 	else:
@@ -113,8 +119,8 @@ def makeMessage(LName, LWind, WCurrent, WSummary, windowHr, windowMin):
 	if windowMin == "0":
 		windowMin = "00"
 
-	text = "The date is %s and the temperature is %s %s. Expect %s The next launch is %s on %s at %s:%s." %(
-			getDate(), WCurrent, units, WSummary, LName, LWind, windowHr, windowMin)
+	text = "%s:\nTemperature: %d%s\nHumidity: %d%%\nRain: %d%%\nExpect %s The next launch is %s on %s at %s:%s." %(
+			getDate(), temp, units, hum, rain, WSummary, LName, LWind, windowHr, windowMin)
 	return text
 
 # Gets the current date and formats it to be easily readable
@@ -138,6 +144,7 @@ def send(textOne, textTwo):
 	server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
 	server.login(USERNAME, PASSWORD)
 	server.sendmail(FROM_ADD, TO_ADD, textOne)
+	time.sleep(1) # Ensure messages are sent in order
 	if textTwo != "":
 		server.sendmail(FROM_ADD, TO_ADD, textTwo)
 	server.quit
