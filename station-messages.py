@@ -24,39 +24,44 @@ DEBUG = False # Send message immediately
 # Sends report at specified time and launch alerts five minutes before window opening
 def main():
 	while True:
-		rawHour, rawMinute = getTime()
-		hour = int(rawHour)
-		minute = int(rawMinute)
+		try:
+			rawHour, rawMinute = getTime()
+			hour = int(rawHour)
+			minute = int(rawMinute)
 		
-		os.system('clear')
-		print(hour, ":", minute)
+			os.system('clear')
+			print(hour, ":", minute)
 		
-		temp, hum, rain, launchName, windOpens, summary, vid = getInfo()
-		if vid == "":
-			vid = "No stream found"
-			
-		window = windOpens[-12:-7]
-		# windowHour and Minute are used for comparison to send alert, windOpens is for use in message
-		windowHour = int(window[:2]) - 4 # To convert UTC to EST
-		windowMinute = int(window[-2:])
-		windOpens = windOpens[:-19] # Remove UTC time and year
-		# Launch alert
-		if hour == windowHour and minute == windowMinute - 5:
-			message = "\nLaunch window for %s opening in five minutes. Watch live: %s" %(
-						launchName, vid)
-			send(message, "")
-			print("Launch alert sent.")
-		# Timed message
-		if hour == 22 and minute ==58 or DEBUG == 1:			
-			message = makeMessage(temp, hum, rain, launchName, windOpens, summary, windowHour, windowMinute)
-			messageOne, messageTwo = splitMessage(message)			
-			send(messageOne, messageTwo)
-			print("Message sent.")
+			temp, hum, rain, launchName, windOpens, summary, vid = getInfo()
+			if vid == "":
+				vid = "No stream found"
+				
+			window = windOpens[-12:-7]
+			# windowHour and Minute are used for comparison to send alert, windOpens is for use in message
+			windowHour = int(window[:2]) - 4 # To convert UTC to EST
+			windowMinute = int(window[-2:])
+			windOpens = windOpens[:-19] # Remove UTC time and year
+			# Launch alert
+			if hour == windowHour and minute == windowMinute - 5:
+				message = "\nLaunch window for %s opening in five minutes. Watch live: %s" %(
+							launchName, vid)
+				send(message, "")
+				print("Launch alert sent.")
+			# Timed message
+			if hour == 5 and minute == 0 or DEBUG == 1:			
+				message = makeMessage(temp, hum, rain, launchName, windOpens, summary, windowHour, windowMinute)
+				messageOne, messageTwo = splitMessage(message)			
+				send(messageOne, messageTwo)
+				print("Message sent.")
 		
-		else:
-			pass
+			else:
+				pass
 	
-		time.sleep(60)
+			time.sleep(60)
+
+		except KeyError:
+			print("KeyError encountered")
+			pass
 
 # Retrieves current and daily weather forecasts and date/name of next launch
 def getInfo():
