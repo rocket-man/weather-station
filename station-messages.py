@@ -32,22 +32,24 @@ def main():
 			os.system('clear')
 			print(hour, ":", minute)
 				
-			#window = windOpens[-12:-7]
-			# windowHour and Minute are used for comparison to send alert, windOpens is for use in message
-			#windowHour = int(window[:2]) - 4 # To convert UTC to EST
-			#windowMinute = int(window[-2:])
-			#windOpens = windOpens[:-19] # Remove UTC time and year
 			# Launch alert
 			#if hour == windowHour and minute == windowMinute - 5:
 			#	message = "\nLaunch window for %s opening in five minutes. Watch live: %s" %(
 			#				launchName, vid)
 			#	send(message, "")
 			#	print("Launch alert sent.")
+			
 			# Timed message
 			if hour == 5 and minute == 0 or DEBUG == 1:
 				temp, hum, rain, launchName, windOpens, summary, vid = getInfo()
 				if vid == "":
 					vid = "No stream found"
+				window = windOpens[-12:-7]
+				windowHour and Minute are used for comparison to send alert, windOpens is for use in message
+				windowHour = int(window[:2]) - 4 # To convert UTC to EST
+				windowMinute = int(window[-2:])
+				windOpens = windOpens[:-19] # Remove UTC time and year
+				
 				message = makeMessage(temp, hum, rain, launchName, windOpens, summary, windowHour, windowMinute)
 				messageOne, messageTwo = splitMessage(message)			
 				send(messageOne, messageTwo)
